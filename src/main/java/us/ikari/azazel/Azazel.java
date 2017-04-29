@@ -3,6 +3,7 @@ package us.ikari.azazel;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -23,7 +24,19 @@ public class Azazel implements Listener {
 
     public Azazel(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.tabs = new ConcurrentHashMap<UUID, Tab>();
+        this.tabs = new ConcurrentHashMap<>();
+
+        if (Bukkit.getMaxPlayers() < 60) {
+            Bukkit.getLogger().severe("There aren't 60 player slots, this will fuck up the tab list."); //TODO: Possibly set max players to 60?
+        }
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!(tabs.containsKey(player.getUniqueId()))) {
+                tabs.put(player.getUniqueId(), new Tab(player, true));
+            }
+        }
+
+        new AzazelTask(this, plugin);
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -34,9 +47,13 @@ public class Azazel implements Listener {
         this.adapter = adapter;
     }
 
+    public Tab getTabByPlayer(Player player) {
+        return tabs.get(player.getUniqueId());
+    }
+
     @EventHandler
     public void onPlayerJoinEvent(PlayerJoinEvent event) {
-        tabs.put(event.getPlayer().getUniqueId(), new Tab());
+        tabs.put(event.getPlayer().getUniqueId(), new Tab(event.getPlayer(), true));
     }
 
     @EventHandler
