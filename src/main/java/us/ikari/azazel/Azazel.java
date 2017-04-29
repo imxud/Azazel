@@ -3,6 +3,7 @@ package us.ikari.azazel;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
+import org.bukkit.craftbukkit.v1_7_R4.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -31,8 +32,10 @@ public class Azazel implements Listener {
         }
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (!(tabs.containsKey(player.getUniqueId()))) {
-                tabs.put(player.getUniqueId(), new Tab(player, true));
+            if (((CraftPlayer)player).getHandle().playerConnection.networkManager.getVersion() < 47) {
+                if (!(tabs.containsKey(player.getUniqueId()))) {
+                    tabs.put(player.getUniqueId(), new Tab(player, true));
+                }
             }
         }
 
@@ -53,7 +56,9 @@ public class Azazel implements Listener {
 
     @EventHandler
     public void onPlayerJoinEvent(PlayerJoinEvent event) {
-        tabs.put(event.getPlayer().getUniqueId(), new Tab(event.getPlayer(), true));
+        if (((CraftPlayer)event.getPlayer()).getHandle().playerConnection.networkManager.getVersion() < 47) {
+            tabs.put(event.getPlayer().getUniqueId(), new Tab(event.getPlayer(), true));
+        }
     }
 
     @EventHandler
