@@ -1,7 +1,11 @@
-package us.ikari.azazel;
+package com.bizarrealex.azazel;
 
+import com.bizarrealex.azazel.tab.Tab;
+import com.bizarrealex.azazel.tab.TabAdapter;
 import lombok.Getter;
 import lombok.Setter;
+import net.minecraft.server.v1_7_R4.EntityPlayer;
+import net.minecraft.server.v1_7_R4.PacketPlayOutPlayerInfo;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_7_R4.entity.CraftPlayer;
 import org.bukkit.entity.Player;
@@ -10,8 +14,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import us.ikari.azazel.tab.Tab;
-import us.ikari.azazel.tab.TabAdapter;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Map;
 import java.util.UUID;
@@ -19,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Azazel implements Listener {
 
-    private final JavaPlugin plugin;
+    @Getter private final JavaPlugin plugin;
     private final Map<UUID, Tab> tabs;
     @Getter @Setter private TabAdapter adapter;
 
@@ -32,11 +35,11 @@ public class Azazel implements Listener {
         }
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (((CraftPlayer)player).getHandle().playerConnection.networkManager.getVersion() < 47) {
+           // if (((CraftPlayer)player).getHandle().playerConnection.networkManager.getVersion() < 47) {
                 if (!(tabs.containsKey(player.getUniqueId()))) {
-                    tabs.put(player.getUniqueId(), new Tab(player, true));
+                    tabs.put(player.getUniqueId(), new Tab(player, true, this));
                 }
-            }
+           // }
         }
 
         new AzazelTask(this, plugin);
@@ -56,13 +59,35 @@ public class Azazel implements Listener {
 
     @EventHandler
     public void onPlayerJoinEvent(PlayerJoinEvent event) {
-        if (((CraftPlayer)event.getPlayer()).getHandle().playerConnection.networkManager.getVersion() < 47) {
-            tabs.put(event.getPlayer().getUniqueId(), new Tab(event.getPlayer(), true));
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            PacketPlayOutPlayerInfo packet = PacketPlayOutPlayerInfo.removePlayer(((CraftPlayer)event.getPlayer()).getHandle());
+            ((CraftPlayer)player).getHandle().playerConnection.sendPacket(packet);
         }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                tabs.put(event.getPlayer().getUniqueId(), new Tab(event.getPlayer(), true, Azazel.this));
+            }
+        }.runTaskLater(plugin, 1L);
     }
 
     @EventHandler
     public void onPlayerQuitEvent(PlayerQuitEvent event) {
         tabs.remove(event.getPlayer().getUniqueId());
+
+        for (Player other : Bukkit.getOnlinePlayers()) {
+            EntityPlayer entityPlayer = ((CraftPlayer)other).getHandle();
+
+            if (entityPlayer.playerConnection.networkManager.getVersion() >= 47) {
+                Tab tab = getTabByPlayer(event.getPlayer());
+
+                if (tab != null && tab.getElevatedTeam() != null) {
+                    tab.getElevatedTeam().removeEntry(event.getPlayer().getName());
+                }
+
+            }
+
+        }
     }
 }

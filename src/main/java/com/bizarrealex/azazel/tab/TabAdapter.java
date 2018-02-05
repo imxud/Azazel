@@ -1,4 +1,4 @@
-package us.ikari.azazel.tab;
+package com.bizarrealex.azazel.tab;
 
 import org.bukkit.entity.Player;
 
